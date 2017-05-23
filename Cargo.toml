@@ -1,0 +1,6 @@
+[package]
+name = "texlite"
+version = "0.1.0"
+authors = ["sharafian <ben@sharafian.me>"]
+
+[dependencies]
