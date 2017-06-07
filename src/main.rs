@@ -1,13 +1,11 @@
-use std::iter;
-
 #[derive(Debug)]
 enum Token {
+  Word(String),
   Backslash,
   LeftBrace,
   RightBrace,
   Paragraph, 
-  EOF,
-  Word(String)
+  EOF
 }
 
 #[derive(Debug)]
@@ -58,37 +56,44 @@ fn tokenize (text: &String) -> Vec<Token> {
   tokens
 }
 
-fn eat (tokens: &mut Iterator<Item=Token>, pattern: Token) {
-  let next = match tokens.next() {
-    Some(w) => w,
-    None => panic!("#oops")
-  };
-
-  if next != pattern { panic!("#oops") } // Throw
+fn eat (tokens: &mut Vec<Token>, pattern: Token) {
+  println!("eat");
+  // TODO: syntax error on invalid token
+  tokens.remove(0);
 }
 
-fn eat_command (tokens: &mut Iterator<Item=Token>) -> AST {
-  eat(&mut tokens, Token::Backslash);
-  let name = match tokens.next() {
-    Some(Token::Word(w)) => w,
+fn eat_command (tokens: &mut Vec<Token>) -> AST {
+  println!("eat command");
+  // eat(tokens, Token::Backslash);
+  let first = tokens.remove(0);
+  println!("eat: {:?}", first);
+  let name = match first {
+    Token::Word(w) => w,
     _ => panic!("#oops")
   };
 
-  eat(&mut tokens, Token::LeftBrace);
-  let internal = eat_block(&mut tokens);
-  eat(&mut tokens, Token::RightBrace);
+  eat(tokens, Token::LeftBrace);
+  println!("tokens before blk: {:?}", tokens);
+  let internal = eat_block(tokens);
+  eat(tokens, Token::RightBrace);
 
+  println!("tokens after cmd: {:?}", tokens);
   AST::Command(name, Box::new(internal))
 }
 
-fn eat_block (tokens: &mut Iterator<Item=Token>) -> AST {
-  let block: Vec<AST> = vec![];
+fn eat_block (tokens: &mut Vec<Token>) -> AST {
+  println!("eat block");
+  let mut block: Vec<AST> = vec![];
   loop {
-    let ast = match tokens.next() {
-      Some(Token::Word(w)) => AST::Word(w),
-      Some(Token::Backslash) => eat_command(&mut tokens),
-      Some(_) => break,
-      None => panic!("#oops")
+    println!("tokens: {:?}", tokens);
+    let ast = match tokens.remove(0) {
+      Token::Word(w) => AST::Word(w),
+      Token::Backslash => eat_command(tokens),
+      x => {
+        // TODO: peek at top instead of doing this
+        tokens.insert(0, x);
+        break;
+      }
     };
     block.push(ast);
   }
@@ -96,14 +101,17 @@ fn eat_block (tokens: &mut Iterator<Item=Token>) -> AST {
   AST::Block(block)
 }
 
-fn parse (tokens: &mut Iterator<Item=Token>) -> AST {
-  eat_block(&mut tokens)
+fn parse (tokens: &mut Vec<Token>) -> AST {
+  let ast = eat_block(tokens);
+  eat(tokens, Token::EOF);
+
+  ast
 }
 
 fn main () {
   let text: String = "a oidmaowid mad \\b{aiodmaowidm}".to_string();
-  let tokens = tokenize(&text).iter();
+  let mut tokens = tokenize(&text);
+  println!("{:?}", tokens);
   let parsed = parse(&mut tokens);
-  
   println!("{}\n{:?}", &text, &parsed);
 }
