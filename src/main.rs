@@ -102,10 +102,45 @@ fn eat_block (tokens: &mut Vec<Token>) -> AST {
 }
 
 fn parse (tokens: &mut Vec<Token>) -> AST {
+  // TODO: multiple blocks
   let ast = eat_block(tokens);
   eat(tokens, Token::EOF);
 
   ast
+}
+
+fn unparse_block (s: &mut String, ast: &AST) {
+  let mut internal = match ast {
+    &AST::Block(ref x) => x,
+    _ => panic!("that's not a block!")
+  };
+
+  for a in internal.iter() {
+    match a {
+      // TODO: whitespace
+      &AST::Word(ref w) => s.push_str(w.as_str()),
+      &AST::Command(ref cmd, ref inner_ast) => unparse_command(s, cmd, inner_ast),
+      _ => panic!("what's this!")
+    };
+    s.push_str(" ");
+  }
+  s.pop();
+}
+
+fn unparse_command (s: &mut String, cmd: &String, ast: &AST) {
+  s.push_str(format!("<{}>", cmd).as_str());
+  unparse_block(s, ast);
+  s.push_str(format!("</{}>", cmd).as_str());
+}
+
+fn unparse (ast: &AST) -> String {
+  let mut s = "".to_owned();
+
+  s.push_str("<p>");
+  unparse_block(&mut s, ast);
+  s.push_str("</p>");
+
+  s
 }
 
 fn main () {
@@ -114,4 +149,6 @@ fn main () {
   println!("{:?}", tokens);
   let parsed = parse(&mut tokens);
   println!("{}\n{:?}", &text, &parsed);
+  let unparsed = unparse(&parsed);
+  println!("{}", unparsed);
 }
