@@ -1,6 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug,Clone,PartialEq)]
 enum Token {
-  Word(String),
+  Word(Box<String>),
   Backslash,
   LeftBrace,
   RightBrace,
@@ -19,7 +19,7 @@ fn flush_token (tokens: &mut Vec<Token>, token_buf: &Vec<char>) {
   if token_buf.len() == 0 { return }
 
   let s: String = token_buf.into_iter().collect();
-  tokens.push(Token::Word(s));
+  tokens.push(Token::Word(Box::new(s)));
 }
 
 fn tokenize (text: &String) -> Vec<Token> {
@@ -57,8 +57,16 @@ fn tokenize (text: &String) -> Vec<Token> {
 }
 
 fn eat (tokens: &mut Vec<Token>, pattern: Token) {
-  println!("eat");
-  // TODO: syntax error on invalid token
+  println!("eat {:?} from {:?}", &pattern, tokens);
+  match (&tokens[0], pattern) {
+    (&Token::Backslash, Token::Backslash) => {},
+    (&Token::LeftBrace, Token::LeftBrace) => {},
+    (&Token::RightBrace, Token::RightBrace) => {},
+    (&Token::Paragraph, Token::Paragraph) => {},
+    (&Token::EOF, Token::EOF) => {},
+    _ => panic!("doesn't match! could not eat token")
+  }
+
   tokens.remove(0);
 }
 
@@ -78,7 +86,7 @@ fn eat_command (tokens: &mut Vec<Token>) -> AST {
   eat(tokens, Token::RightBrace);
 
   println!("tokens after cmd: {:?}", tokens);
-  AST::Command(name, Box::new(internal))
+  AST::Command(*name, Box::new(internal))
 }
 
 fn eat_block (tokens: &mut Vec<Token>) -> AST {
@@ -87,7 +95,7 @@ fn eat_block (tokens: &mut Vec<Token>) -> AST {
   loop {
     println!("tokens: {:?}", tokens);
     let ast = match tokens.remove(0) {
-      Token::Word(w) => AST::Word(w),
+      Token::Word(w) => AST::Word(*w),
       Token::Backslash => eat_command(tokens),
       x => {
         // TODO: peek at top instead of doing this
@@ -101,16 +109,24 @@ fn eat_block (tokens: &mut Vec<Token>) -> AST {
   AST::Block(block)
 }
 
-fn parse (tokens: &mut Vec<Token>) -> AST {
+fn parse (tokens: &mut Vec<Token>) -> Vec<AST> {
   // TODO: multiple blocks
-  let ast = eat_block(tokens);
-  eat(tokens, Token::EOF);
+  let mut block_list = vec![];
 
-  ast
+  loop {
+    block_list.push(eat_block(tokens));
+    match &tokens[0] {
+      &Token::EOF => break,
+      &Token::Paragraph => eat(tokens, Token::Paragraph),
+      _ => panic!("expected paragraph break or EOF")
+    };
+  }
+
+  block_list
 }
 
 fn unparse_block (s: &mut String, ast: &AST) {
-  let mut internal = match ast {
+  let internal = match ast {
     &AST::Block(ref x) => x,
     _ => panic!("that's not a block!")
   };
@@ -133,18 +149,20 @@ fn unparse_command (s: &mut String, cmd: &String, ast: &AST) {
   s.push_str(format!("</{}>", cmd).as_str());
 }
 
-fn unparse (ast: &AST) -> String {
+fn unparse (block_list: &Vec<AST>) -> String {
   let mut s = "".to_owned();
 
-  s.push_str("<p>");
-  unparse_block(&mut s, ast);
-  s.push_str("</p>");
+  for ast in block_list {
+    s.push_str("<p>");
+    unparse_block(&mut s, ast);
+    s.push_str("</p>");
+  }
 
   s
 }
 
 fn main () {
-  let text: String = "a oidmaowid mad \\b{aiodmaowidm}".to_string();
+  let text: String = "a oidmaowid mad \\b{aiodmaowidm}\n\nadawoim awdm awoi ma".to_string();
   let mut tokens = tokenize(&text);
   println!("{:?}", tokens);
   let parsed = parse(&mut tokens);
