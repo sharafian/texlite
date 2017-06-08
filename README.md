@@ -19,5 +19,5 @@ Output:
 
 - Represent tokens as linked list instead of vector
 - Proper syntax errors
-- Multiple paragraphs
+- ~Multiple paragraphs~
 - Structure code to break up tokenizer, parser, unparser
