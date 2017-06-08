@@ -1,3 +1,7 @@
+use std::env;
+use std::io::Read;
+use std::fs::File;
+
 #[derive(Debug,Clone,PartialEq)]
 enum Token {
   Word(Box<String>),
@@ -110,7 +114,6 @@ fn eat_block (tokens: &mut Vec<Token>) -> AST {
 }
 
 fn parse (tokens: &mut Vec<Token>) -> Vec<AST> {
-  // TODO: multiple blocks
   let mut block_list = vec![];
 
   loop {
@@ -133,7 +136,6 @@ fn unparse_block (s: &mut String, ast: &AST) {
 
   for a in internal.iter() {
     match a {
-      // TODO: whitespace
       &AST::Word(ref w) => s.push_str(w.as_str()),
       &AST::Command(ref cmd, ref inner_ast) => unparse_command(s, cmd, inner_ast),
       _ => panic!("what's this!")
@@ -162,7 +164,18 @@ fn unparse (block_list: &Vec<AST>) -> String {
 }
 
 fn main () {
-  let text: String = "a oidmaowid mad \\b{aiodmaowidm}\n\nadawoim awdm awoi ma".to_string();
+
+  let filename = match env::args().nth(1) {
+    Some(x) => x,
+    None => panic!("args[1] must be filename!")
+  };
+
+  let mut file = File::open(filename.as_str()).expect("Unable to read file");
+  let mut text = String::new();
+
+  // TODO: line-by-line for larger files
+  file.read_to_string(&mut text).expect("Unable to read string");
+
   let mut tokens = tokenize(&text);
   println!("{:?}", tokens);
   let parsed = parse(&mut tokens);
