@@ -6,7 +6,7 @@
 The file `example.txl` contains some texlite markdown.
 
 ```sh
-cargo run example.txl | tail -n1 > example.html
+cargo run example.txl > example.html
 open example.html
 ```
 
@@ -24,5 +24,5 @@ open example.html
 - Represent tokens as linked list instead of vector
 - Proper syntax errors
 - ~Multiple paragraphs~
-- Structure code to break up tokenizer, parser, unparser
+- ~Structure code to break up tokenizer, parser, unparser~
 - Webserver to view files
